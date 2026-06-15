@@ -172,12 +172,28 @@ app.get('/api/servers', (_req, res) => res.json(SERVERS));
 app.get('/api/status', (_req, res) => {
   if (!dbReady) return res.status(503).json({ error: 'DB not ready' });
 
+  // ── Uptime bulan ini
+  const now        = new Date();
+  const yyyy       = now.getFullYear();
+  const mm         = String(now.getMonth() + 1).padStart(2, '0');
+  const monthStart = `${yyyy}-${mm}-01 00:00:00`;
+  const monthLabel = now.toLocaleString('id-ID', { month: 'long', year: 'numeric' });
+
+  const monthlyUptime = db.exec(
+    `SELECT server_id,
+            COUNT(*) AS total,
+            SUM(CASE WHEN status='UP' THEN 1 ELSE 0 END) AS ups,
+            ROUND(SUM(CASE WHEN status='UP' THEN 1 ELSE 0 END)*100.0/COUNT(*),2) AS pct
+     FROM uptime_checks
+     WHERE checked_at >= '${monthStart}'
+     GROUP BY server_id`
+  );
+
+  // ── Last status, response time, dll dari server_stats
   const stats   = db.exec(`SELECT * FROM server_stats`);
   const history = db.exec(`
     SELECT server_id, status, status_code, response_time_ms, checked_at
-    FROM uptime_checks
-    ORDER BY checked_at DESC
-    LIMIT 260
+    FROM uptime_checks ORDER BY checked_at DESC LIMIT 340
   `);
 
   const statsMap = {};
@@ -186,6 +202,19 @@ app.get('/api/status', (_req, res) => {
     for (const row of stats[0].values) {
       const o = {}; cols.forEach((c,i) => o[c] = row[i]);
       statsMap[o.server_id] = o;
+    }
+  }
+
+  // Override uptime_percent dengan kalkulasi bulan ini
+  if (monthlyUptime.length) {
+    const cols = monthlyUptime[0].columns;
+    for (const row of monthlyUptime[0].values) {
+      const o = {}; cols.forEach((c,i) => o[c] = row[i]);
+      if (statsMap[o.server_id]) {
+        statsMap[o.server_id].uptime_percent       = o.pct ?? 0;
+        statsMap[o.server_id].monthly_total_checks = o.total;
+        statsMap[o.server_id].monthly_up_checks    = o.ups;
+      }
     }
   }
 
@@ -199,7 +228,7 @@ app.get('/api/status', (_req, res) => {
     }
   }
 
-  res.json({ stats: statsMap, history: historyMap, servers: SERVERS });
+  res.json({ stats: statsMap, history: historyMap, servers: SERVERS, monthLabel });
 });
 
 app.post('/api/check-now', async (_req, res) => {

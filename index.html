@@ -363,7 +363,7 @@ async function render() {
     return;
   }
 
-  const { servers, stats, history } = data;
+  const { servers, stats, history, monthLabel } = data;
 
   // ─ Global stats
   let up = 0, down = 0;
@@ -435,7 +435,7 @@ async function render() {
         <div class="metrics">
           <div>
             <div class="metric-val ${sc}">${uptime}</div>
-            <div class="metric-lbl">Uptime</div>
+            <div class="metric-lbl">Uptime ${monthLabel || ''}</div>
           </div>
           <div>
             <div class="metric-val">${rt}</div>
