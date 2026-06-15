@@ -1,19 +1,15 @@
 /**
  * app.js — Entry point untuk cPanel Passenger
+ * Version: better-sqlite3
  */
 
 const express = require('express');
 const fetch = require('node-fetch');
 const cors = require('cors');
-const fs = require('fs');
 const path = require('path');
-const initSqlJs = require('sql.js');
+const Database = require('better-sqlite3');
 
 const app = express();
-
-console.log('[BOOT] Starting...');
-console.log('[BOOT] Node:', process.version);
-console.log('[BOOT] Dir:', __dirname);
 
 const DB_PATH = path.join(__dirname, 'serversstatus.db');
 
@@ -41,28 +37,14 @@ const SERVERS = [
   { id: 'dps', label: 'Digital Publishing System', url: 'https://dps.pustakajaya.com', group: 'Pustaka Jaya' }
 ];
 
-let db = null;
-let SQL = null;
+let db;
 let dbReady = false;
 let isChecking = false;
 
-async function initDB() {
-  SQL = await initSqlJs({
-    locateFile: file => require.resolve(`sql.js/dist/${file}`)
-  });
+function initDB() {
+  db = new Database(DB_PATH);
 
-  console.log('[DB] sql.js loaded');
-
-  if (fs.existsSync(DB_PATH)) {
-    const buf = fs.readFileSync(DB_PATH);
-    db = new SQL.Database(buf);
-    console.log('[DB] Loaded existing DB:', DB_PATH);
-  } else {
-    db = new SQL.Database();
-    console.log('[DB] Created new DB:', DB_PATH);
-  }
-
-  db.run(`
+  db.exec(`
     CREATE TABLE IF NOT EXISTS uptime_checks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       server_id TEXT NOT NULL,
@@ -74,7 +56,7 @@ async function initDB() {
     )
   `);
 
-  db.run(`
+  db.exec(`
     CREATE TABLE IF NOT EXISTS server_stats (
       server_id TEXT PRIMARY KEY,
       total_checks INTEGER DEFAULT 0,
@@ -88,18 +70,8 @@ async function initDB() {
   `);
 
   dbReady = true;
-  console.log('[DB] Ready.');
-}
 
-function saveDB() {
-  try {
-    if (!db) return;
-
-    const data = db.export();
-    fs.writeFileSync(DB_PATH, Buffer.from(data));
-  } catch (err) {
-    console.error('[DB] Save error:', err);
-  }
+  console.log('[DB] Ready:', DB_PATH);
 }
 
 async function checkServer(server) {
@@ -109,7 +81,7 @@ async function checkServer(server) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
 
-    const res = await fetch(server.url, {
+    const resp = await fetch(server.url, {
       method: 'GET',
       signal: controller.signal,
       redirect: 'follow',
@@ -121,13 +93,10 @@ async function checkServer(server) {
 
     clearTimeout(timeout);
 
-    const elapsed = Date.now() - start;
-    const status = res.status < 500 ? 'UP' : 'DOWN';
-
     return {
-      status,
-      statusCode: res.status,
-      responseTime: elapsed
+      status: resp.status < 500 ? 'UP' : 'DOWN',
+      statusCode: resp.status,
+      responseTime: Date.now() - start
     };
   } catch (err) {
     return {
@@ -145,7 +114,7 @@ async function runAllChecks() {
   isChecking = true;
 
   try {
-    console.log(`[CHECK] ${new Date().toISOString()} — running ${SERVERS.length} checks...`);
+    console.log(`[CHECK] ${new Date().toISOString()} running ${SERVERS.length} checks`);
 
     const results = await Promise.all(
       SERVERS.map(async server => ({
@@ -154,93 +123,107 @@ async function runAllChecks() {
       }))
     );
 
-    for (const { server, result } of results) {
-      db.run(
-        `INSERT INTO uptime_checks
-        (server_id, server_url, status, status_code, response_time_ms)
-        VALUES (?,?,?,?,?)`,
-        [
-          server.id,
-          server.url,
-          result.status,
-          result.statusCode ?? null,
-          result.responseTime
-        ]
-      );
+    const insertCheck = db.prepare(`
+      INSERT INTO uptime_checks
+      (
+        server_id,
+        server_url,
+        status,
+        status_code,
+        response_time_ms
+      )
+      VALUES (?, ?, ?, ?, ?)
+    `);
 
-      const existing = db.exec(
-        `SELECT total_checks, up_checks
-         FROM server_stats
-         WHERE server_id = ?`,
-        [server.id]
-      );
+    const getStats = db.prepare(`
+      SELECT total_checks, up_checks
+      FROM server_stats
+      WHERE server_id = ?
+    `);
 
-      if (!existing.length || !existing[0].values.length) {
-        const up = result.status === 'UP' ? 1 : 0;
+    const insertStats = db.prepare(`
+      INSERT INTO server_stats
+      (
+        server_id,
+        total_checks,
+        up_checks,
+        last_status,
+        last_status_code,
+        last_response_time_ms,
+        last_checked_at,
+        uptime_percent
+      )
+      VALUES (?,1,?,?,?,?,CURRENT_TIMESTAMP,?)
+    `);
 
-        db.run(
-          `INSERT INTO server_stats
-          (
-            server_id,
-            total_checks,
-            up_checks,
-            last_status,
-            last_status_code,
-            last_response_time_ms,
-            last_checked_at,
-            uptime_percent
-          )
-          VALUES (?,1,?,?,?,?,CURRENT_TIMESTAMP,?)`,
-          [
-            server.id,
-            up,
-            result.status,
-            result.statusCode ?? null,
-            result.responseTime,
-            up * 100
-          ]
-        );
-      } else {
-        const [tot, ups] = existing[0].values[0];
+    const updateStats = db.prepare(`
+      UPDATE server_stats
+      SET
+        total_checks=?,
+        up_checks=?,
+        last_status=?,
+        last_status_code=?,
+        last_response_time_ms=?,
+        last_checked_at=CURRENT_TIMESTAMP,
+        uptime_percent=?
+      WHERE server_id=?
+    `);
 
-        const newTot = tot + 1;
-        const newUps = ups + (result.status === 'UP' ? 1 : 0);
-
-        db.run(
-          `UPDATE server_stats
-           SET total_checks=?,
-               up_checks=?,
-               last_status=?,
-               last_status_code=?,
-               last_response_time_ms=?,
-               last_checked_at=CURRENT_TIMESTAMP,
-               uptime_percent=?
-           WHERE server_id=?`,
-          [
-            newTot,
-            newUps,
-            result.status,
-            result.statusCode ?? null,
-            result.responseTime,
-            (newUps / newTot) * 100,
-            server.id
-          ]
-        );
-      }
-    }
-
-    db.run(`
+    const cleanupOld = db.prepare(`
       DELETE FROM uptime_checks
       WHERE checked_at < datetime('now','-30 days')
     `);
 
-    saveDB();
+    const transaction = db.transaction(() => {
+      for (const { server, result } of results) {
+        insertCheck.run(
+          server.id,
+          server.url,
+          result.status,
+          result.statusCode,
+          result.responseTime
+        );
 
-    console.log('[CHECK] Done.');
+        const existing = getStats.get(server.id);
+
+        if (!existing) {
+          const up = result.status === 'UP' ? 1 : 0;
+
+          insertStats.run(
+            server.id,
+            up,
+            result.status,
+            result.statusCode,
+            result.responseTime,
+            up * 100
+          );
+        } else {
+          const newTot = existing.total_checks + 1;
+          const newUps = existing.up_checks + (result.status === 'UP' ? 1 : 0);
+
+          updateStats.run(
+            newTot,
+            newUps,
+            result.status,
+            result.statusCode,
+            result.responseTime,
+            (newUps / newTot) * 100,
+            server.id
+          );
+        }
+      }
+
+      cleanupOld.run();
+    });
+
+    transaction();
+
+    console.log('[CHECK] Done');
 
     return results;
   } catch (err) {
-    console.error('[CHECK] Fatal:', err);
+    console.error('[CHECK]', err);
+    throw err;
   } finally {
     isChecking = false;
   }
@@ -251,172 +234,110 @@ app.get('/api/servers', (_req, res) => {
 });
 
 app.get('/api/status', (_req, res) => {
-  if (!dbReady) {
-    return res.status(503).json({
-      error: 'DB not ready'
+  try {
+    const statsRows = db.prepare(`
+      SELECT *
+      FROM server_stats
+    `).all();
+
+    const historyRows = db.prepare(`
+      SELECT
+        server_id,
+        status,
+        status_code,
+        response_time_ms,
+        checked_at
+      FROM uptime_checks
+      ORDER BY checked_at DESC
+      LIMIT 340
+    `).all();
+
+    const stats = {};
+
+    for (const row of statsRows) {
+      stats[row.server_id] = row;
+    }
+
+    const history = {};
+
+    for (const row of historyRows) {
+      if (!history[row.server_id]) {
+        history[row.server_id] = [];
+      }
+
+      if (history[row.server_id].length < 20) {
+        history[row.server_id].push(row);
+      }
+    }
+
+    res.json({
+      stats,
+      history,
+      servers: SERVERS,
+      monthLabel: new Date().toLocaleString('id-ID', {
+        month: 'long',
+        year: 'numeric'
+      })
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: err.message
     });
   }
-
-  const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-
-  const monthStart = `${yyyy}-${mm}-01 00:00:00`;
-  const monthLabel = now.toLocaleString('id-ID', {
-    month: 'long',
-    year: 'numeric'
-  });
-
-  const monthlyUptime = db.exec(`
-    SELECT
-      server_id,
-      COUNT(*) AS total,
-      SUM(CASE WHEN status='UP' THEN 1 ELSE 0 END) AS ups,
-      ROUND(
-        SUM(CASE WHEN status='UP' THEN 1 ELSE 0 END) * 100.0 / COUNT(*),
-        2
-      ) AS pct
-    FROM uptime_checks
-    WHERE checked_at >= '${monthStart}'
-    GROUP BY server_id
-  `);
-
-  const stats = db.exec(`SELECT * FROM server_stats`);
-
-  const history = db.exec(`
-    SELECT
-      server_id,
-      status,
-      status_code,
-      response_time_ms,
-      checked_at
-    FROM uptime_checks
-    ORDER BY checked_at DESC
-    LIMIT 340
-  `);
-
-  const statsMap = {};
-
-  if (stats.length) {
-    const cols = stats[0].columns;
-
-    for (const row of stats[0].values) {
-      const obj = {};
-      cols.forEach((c, i) => (obj[c] = row[i]));
-      statsMap[obj.server_id] = obj;
-    }
-  }
-
-  if (monthlyUptime.length) {
-    const cols = monthlyUptime[0].columns;
-
-    for (const row of monthlyUptime[0].values) {
-      const obj = {};
-      cols.forEach((c, i) => (obj[c] = row[i]));
-
-      if (statsMap[obj.server_id]) {
-        statsMap[obj.server_id].uptime_percent = obj.pct ?? 0;
-        statsMap[obj.server_id].monthly_total_checks = obj.total;
-        statsMap[obj.server_id].monthly_up_checks = obj.ups;
-      }
-    }
-  }
-
-  const historyMap = {};
-
-  if (history.length) {
-    const cols = history[0].columns;
-
-    for (const row of history[0].values) {
-      const obj = {};
-      cols.forEach((c, i) => (obj[c] = row[i]));
-
-      if (!historyMap[obj.server_id]) {
-        historyMap[obj.server_id] = [];
-      }
-
-      if (historyMap[obj.server_id].length < 20) {
-        historyMap[obj.server_id].push(obj);
-      }
-    }
-  }
-
-  res.json({
-    stats: statsMap,
-    history: historyMap,
-    servers: SERVERS,
-    monthLabel
-  });
 });
 
 app.post('/api/check-now', async (_req, res) => {
-  if (!dbReady) {
-    return res.status(503).json({
-      error: 'DB not ready'
+  try {
+    const results = await runAllChecks();
+
+    res.json({
+      success: true,
+      checked: results?.length || 0
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err.message
     });
   }
-
-  const results = await runAllChecks();
-
-  res.json({
-    success: true,
-    checked: results?.length || 0
-  });
 });
 
 app.get('/api/history/:serverId', (req, res) => {
-  if (!dbReady) {
-    return res.status(503).json({
-      error: 'DB not ready'
+  try {
+    const limit = Math.min(
+      parseInt(req.query.limit || '100', 10),
+      500
+    );
+
+    const rows = db.prepare(`
+      SELECT *
+      FROM uptime_checks
+      WHERE server_id = ?
+      ORDER BY checked_at DESC
+      LIMIT ?
+    `).all(req.params.serverId, limit);
+
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({
+      error: err.message
     });
   }
-
-  const limit = Math.min(
-    parseInt(req.query.limit || '100', 10),
-    500
-  );
-
-  const rows = db.exec(
-    `SELECT *
-     FROM uptime_checks
-     WHERE server_id=?
-     ORDER BY checked_at DESC
-     LIMIT ?`,
-    [req.params.serverId, limit]
-  );
-
-  if (!rows.length) {
-    return res.json([]);
-  }
-
-  const cols = rows[0].columns;
-
-  res.json(
-    rows[0].values.map(row => {
-      const obj = {};
-      cols.forEach((c, i) => (obj[c] = row[i]));
-      return obj;
-    })
-  );
 });
 
 (async () => {
   try {
-    await initDB();
+    initDB();
 
     await runAllChecks();
 
-    setInterval(async () => {
-      try {
-        await runAllChecks();
-      } catch (err) {
-        console.error('[INTERVAL]', err);
-      }
+    setInterval(() => {
+      runAllChecks().catch(console.error);
     }, 3 * 60 * 1000);
 
     console.log('[BOOT] Ready');
   } catch (err) {
-    console.error('[BOOT] Fatal:', err);
+    console.error('[BOOT]', err);
   }
 })();
 
