@@ -1,0 +1,19 @@
+{
+  "name": "uptime",
+  "version": "1.0.0",
+  "description": "Pustaka Jaya Server Uptime Monitor",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "node-fetch": "^2.7.0",
+    "sql.js": "^1.14.1"
+  }
+}
