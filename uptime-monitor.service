@@ -1,0 +1,19 @@
+[Unit]
+Description=Pustaka Jaya Uptime Monitor
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/srv/uptime
+
+ExecStart=/root/.nvm/versions/node/v24.14.1/bin/node /srv/uptime/server.js
+
+Environment=NODE_ENV=production
+Environment=PORT=3737
+
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
