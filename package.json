@@ -1,19 +1,19 @@
 {
-  "name": "uptime",
-  "version": "1.0.0",
+  "name": "pustakajaya-uptime-monitor",
+  "version": "2.0.0",
   "description": "Pustaka Jaya Server Uptime Monitor",
-  "main": "index.js",
+  "main": "app.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "dev":   "node server.js",
+    "start": "node app.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "engines": {
+    "node": ">=16.0.0"
+  },
   "dependencies": {
-    "cors": "^2.8.6",
-    "express": "^5.2.1",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
     "node-fetch": "^2.7.0",
-    "sql.js": "^1.14.1"
+    "sql.js": "^1.10.3"
   }
 }

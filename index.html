@@ -1,627 +1,479 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Pustaka Jaya — Server Status</title>
+<link rel="icon" type="image/png" href="https://pustakajaya.com/favicon.png" onerror="this.href='https://pustakajaya.com/favicon.ico'"/>
+<link rel="shortcut icon" href="https://pustakajaya.com/favicon.ico"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg:          #0D1117;
-    --surface:     #161B22;
-    --surface2:    #1C2330;
-    --border:      #30363D;
-    --text:        #E6EDF3;
-    --muted:       #8B949E;
-    --cyan:        #22D3EE;
-    --cyan-dim:    rgba(34,211,238,.12);
-    --green:       #10B981;
-    --green-dim:   rgba(16,185,129,.12);
-    --red:         #EF4444;
-    --red-dim:     rgba(239,68,68,.12);
-    --amber:       #F59E0B;
-    --amber-dim:   rgba(245,158,11,.12);
-    --font-mono:   'JetBrains Mono', monospace;
-    --font-ui:     'Inter', sans-serif;
+    --bg:        #0D1117;
+    --surface:   #161B22;
+    --surface2:  #1C2330;
+    --border:    #30363D;
+    --text:      #E6EDF3;
+    --muted:     #8B949E;
+    --cyan:      #22D3EE;
+    --cyan-dim:  rgba(34,211,238,.12);
+    --green:     #10B981;
+    --green-dim: rgba(16,185,129,.12);
+    --red:       #EF4444;
+    --red-dim:   rgba(239,68,68,.12);
+    --amber:     #F59E0B;
+    --amber-dim: rgba(245,158,11,.12);
+    --mono:      'JetBrains Mono', monospace;
+    --ui:        'Inter', sans-serif;
   }
 
   html { scroll-behavior: smooth; }
-
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: var(--font-ui);
+    font-family: var(--ui);
     min-height: 100vh;
     font-size: 14px;
     line-height: 1.6;
   }
 
-  /* ─── HEADER ─────────────────────────────────────── */
+  /* ── HEADER ── */
   header {
     border-bottom: 1px solid var(--border);
     padding: 0 28px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
+    position: sticky; top: 0; z-index: 100;
     background: rgba(13,17,23,.92);
     backdrop-filter: blur(12px);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    display: flex; align-items: center; justify-content: space-between;
     height: 60px;
   }
-
-  .header-brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
+  .brand { display: flex; align-items: center; gap: 12px; }
   .brand-icon {
     width: 32px; height: 32px;
-    background: linear-gradient(135deg, var(--cyan), #6366f1);
     border-radius: 8px;
+    overflow: hidden;
     display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
   }
-
-  .brand-name {
-    font-family: var(--font-mono);
-    font-weight: 700;
-    font-size: 15px;
-    letter-spacing: -.3px;
+  .brand-icon img {
+    width: 100%; height: 100%; object-fit: contain;
   }
-
+  .brand-name { font-family: var(--mono); font-weight: 700; font-size: 15px; letter-spacing: -.3px; }
   .brand-name span { color: var(--cyan); }
-
-  .header-meta {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--muted);
+  .header-right { display: flex; align-items: center; gap: 12px; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .header-datetime {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
+  }
+  .header-date { font-size: 10px; color: var(--muted); }
+  .header-time { font-size: 12px; color: var(--text); font-weight: 600; }
+  #badge-next {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px 10px; color: var(--amber);
   }
 
-  #next-check-badge {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 4px 10px;
-    font-size: 11px;
-    color: var(--amber);
-  }
-
-  /* ─── GLOBAL STATUS BAR ──────────────────────────── */
+  /* ── GLOBAL BAR ── */
   .global-bar {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
+    background: var(--surface); border-bottom: 1px solid var(--border);
     padding: 14px 28px;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    flex-wrap: wrap;
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
   }
-
-  .global-status {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-family: var(--font-mono);
-    font-weight: 600;
-    font-size: 13px;
-  }
-
+  .global-status { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-weight: 600; font-size: 13px; }
   .live-dot {
-    width: 10px; height: 10px;
-    border-radius: 50%;
+    width: 10px; height: 10px; border-radius: 50%;
     background: var(--green);
     box-shadow: 0 0 0 0 rgba(16,185,129,.5);
-    animation: pulse-ring 2s ease infinite;
+    animation: pulse 2s ease infinite;
   }
-  .live-dot.issue { background: var(--amber); box-shadow: 0 0 0 0 rgba(245,158,11,.5); }
-  .live-dot.down  { background: var(--red);   box-shadow: 0 0 0 0 rgba(239,68,68,.5); }
+  .live-dot.warn { background: var(--amber); box-shadow: 0 0 0 0 rgba(245,158,11,.5); }
+  .live-dot.crit { background: var(--red);   box-shadow: 0 0 0 0 rgba(239,68,68,.5); }
 
-  @keyframes pulse-ring {
-    0%   { box-shadow: 0 0 0 0 currentColor; }
-    70%  { box-shadow: 0 0 0 7px transparent; }
-    100% { box-shadow: 0 0 0 0 transparent; }
-  }
-
-  .stat-chips {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-left: auto;
+  @keyframes pulse {
+    0%  { box-shadow: 0 0 0 0 currentColor; }
+    70% { box-shadow: 0 0 0 7px transparent; }
+    100%{ box-shadow: 0 0 0 0 transparent; }
   }
 
+  .chips { display: flex; gap: 10px; flex-wrap: wrap; margin-left: auto; }
   .chip {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    font-weight: 600;
-    border: 1px solid;
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border-radius: 20px;
+    font-family: var(--mono); font-size: 12px; font-weight: 600; border: 1px solid;
   }
-  .chip.up    { background: var(--green-dim); border-color: var(--green); color: var(--green); }
-  .chip.down  { background: var(--red-dim);   border-color: var(--red);   color: var(--red); }
-  .chip.total { background: var(--cyan-dim);  border-color: var(--cyan);  color: var(--cyan); }
+  .chip.all  { background: var(--cyan-dim);  border-color: var(--cyan);  color: var(--cyan); }
+  .chip.up   { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+  .chip.down { background: var(--red-dim);   border-color: var(--red);   color: var(--red); }
 
   .btn-check {
-    background: var(--cyan);
-    color: #000;
-    border: none;
-    border-radius: 8px;
-    padding: 7px 16px;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: opacity .15s, transform .1s;
-    white-space: nowrap;
+    background: var(--cyan); color: #000;
+    border: none; border-radius: 8px;
+    padding: 7px 16px; font-family: var(--mono); font-size: 12px; font-weight: 700;
+    cursor: pointer; transition: opacity .15s, transform .1s; white-space: nowrap;
   }
-  .btn-check:hover { opacity: .85; }
-  .btn-check:active { transform: scale(.97); }
-  .btn-check:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-check:hover   { opacity: .85; }
+  .btn-check:active  { transform: scale(.97); }
+  .btn-check:disabled{ opacity: .4; cursor: not-allowed; }
 
-  /* ─── MAIN LAYOUT ────────────────────────────────── */
-  main {
-    padding: 28px;
-    max-width: 1280px;
-    margin: 0 auto;
-  }
-
-  .section-label {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 14px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .section-label::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
+  /* ── MAIN ── */
+  main { padding: 28px; max-width: 1280px; margin: 0 auto; }
 
   .group-block { margin-bottom: 36px; }
-
-  .cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 14px;
+  .section-label {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 14px;
+    display: flex; align-items: center; gap: 10px;
   }
+  .section-label::after { content:''; flex:1; height:1px; background:var(--border); }
 
-  /* ─── SERVER CARD ────────────────────────────────── */
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+
+  /* ── CARD ── */
   .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 16px;
-    position: relative;
-    overflow: hidden;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; position: relative; overflow: hidden;
     transition: border-color .2s, transform .15s;
-    cursor: default;
   }
   .card:hover { border-color: var(--cyan); transform: translateY(-2px); }
-
   .card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    background: var(--border);
-    transition: background .3s;
+    content:''; position:absolute; top:0; left:0; right:0; height:3px;
+    background: var(--border); transition: background .3s;
   }
-  .card.up::before    { background: var(--green); }
-  .card.down::before  { background: var(--red); }
-  .card.pending::before { background: var(--amber); }
+  .card.up::before   { background: var(--green); }
+  .card.down::before { background: var(--red); }
+  .card.pend::before { background: var(--amber); }
 
-  .card-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: 10px;
-  }
+  .card-head { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:10px; }
+  .card-label { font-weight:600; font-size:13px; color:var(--text); }
+  .card-url { font-family:var(--mono); font-size:10px; color:var(--muted); margin-top:2px; word-break:break-all; }
 
-  .card-label {
-    font-weight: 600;
-    font-size: 13px;
-    color: var(--text);
+  .badge {
+    display:flex; align-items:center; gap:5px;
+    padding:3px 9px; border-radius:5px;
+    font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.5px;
+    flex-shrink:0;
   }
+  .badge.up   { background:var(--green-dim); color:var(--green); }
+  .badge.down { background:var(--red-dim);   color:var(--red); }
+  .badge.pend { background:var(--amber-dim); color:var(--amber); }
+  .bdot { width:7px; height:7px; border-radius:50%; background:currentColor; }
+  .badge.up .bdot { animation: pulse 2s ease infinite; }
 
-  .card-url {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    color: var(--muted);
-    margin-top: 2px;
-    word-break: break-all;
-  }
+  .metrics { display:flex; gap:16px; margin:10px 0; }
+  .metric-val { font-family:var(--mono); font-size:15px; font-weight:700; color:var(--text); }
+  .metric-val.up   { color:var(--green); }
+  .metric-val.down { color:var(--red); }
+  .metric-lbl { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.7px; }
 
-  .status-badge {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    padding: 3px 9px;
-    border-radius: 5px;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: .5px;
-    flex-shrink: 0;
-  }
-  .status-badge.up      { background: var(--green-dim); color: var(--green); }
-  .status-badge.down    { background: var(--red-dim);   color: var(--red); }
-  .status-badge.pending { background: var(--amber-dim); color: var(--amber); }
+  .sparkline { display:flex; gap:2px; margin-top:10px; align-items:flex-end; height:20px; }
+  .seg { flex:1; border-radius:2px; height:100%; min-width:4px; transition:opacity .2s; }
+  .seg.up   { background:var(--green); opacity:.7; }
+  .seg.down { background:var(--red);   opacity:.9; }
+  .seg.pend { background:var(--border); }
+  .seg:hover { opacity:1 !important; }
 
-  .status-dot {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: currentColor;
-  }
-  .status-badge.up .status-dot {
-    animation: pulse-ring 2s ease infinite;
-  }
+  .last-chk { font-family:var(--mono); font-size:10px; color:var(--muted); margin-top:8px; }
 
-  .card-metrics {
-    display: flex;
-    gap: 16px;
-    margin: 10px 0;
-  }
-
-  .metric {
-    display: flex;
-    flex-direction: column;
-  }
-  .metric-val {
-    font-family: var(--font-mono);
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--text);
-  }
-  .metric-val.up   { color: var(--green); }
-  .metric-val.down { color: var(--red); }
-  .metric-label {
-    font-size: 10px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: .7px;
-  }
-
-  /* ─── HISTORY SPARKLINE ──────────────────────────── */
-  .history-bar {
-    display: flex;
-    gap: 2px;
-    margin-top: 10px;
-    align-items: flex-end;
-    height: 20px;
-  }
-
-  .hb-segment {
-    flex: 1;
-    border-radius: 2px;
-    height: 100%;
-    min-width: 4px;
-    transition: opacity .2s;
-  }
-  .hb-segment.up      { background: var(--green); opacity: .7; }
-  .hb-segment.down    { background: var(--red);   opacity: .9; }
-  .hb-segment.pending { background: var(--border); }
-  .hb-segment:hover   { opacity: 1 !important; }
-
-  .last-checked {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    color: var(--muted);
-    margin-top: 8px;
-  }
-
-  /* ─── LOADING SKELETON ───────────────────────────── */
-  @keyframes shimmer {
-    0%   { background-position: -400px 0; }
-    100% { background-position: 400px 0; }
-  }
-  .skeleton {
-    background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
-    background-size: 400px 100%;
-    animation: shimmer 1.4s ease infinite;
-    border-radius: 4px;
-  }
-
-  /* ─── TOAST ──────────────────────────────────────── */
+  /* ── TOAST ── */
   #toast {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px 18px;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--text);
-    opacity: 0;
-    transform: translateY(10px);
-    transition: opacity .25s, transform .25s;
-    pointer-events: none;
-    z-index: 999;
-    max-width: 280px;
+    position:fixed; bottom:24px; right:24px;
+    background:var(--surface2); border:1px solid var(--border); border-radius:10px;
+    padding:12px 18px; font-family:var(--mono); font-size:12px; color:var(--text);
+    opacity:0; transform:translateY(10px);
+    transition:opacity .25s, transform .25s;
+    pointer-events:none; z-index:999; max-width:300px;
   }
-  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.show { opacity:1; transform:translateY(0); }
 
-  /* ─── FOOTER ─────────────────────────────────────── */
+  /* ── ERROR STATE ── */
+  .error-state {
+    text-align:center; padding:60px 20px;
+    font-family:var(--mono); font-size:13px;
+  }
+  .error-state .icon { font-size:40px; margin-bottom:16px; }
+  .error-state .title { color:var(--red); font-weight:700; margin-bottom:8px; }
+  .error-state .sub { color:var(--muted); line-height:1.8; }
+  .error-state code { color:var(--cyan); }
+
   footer {
-    text-align: center;
-    padding: 24px;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--muted);
-    border-top: 1px solid var(--border);
-    margin-top: 20px;
+    text-align:center; padding:24px;
+    font-family:var(--mono); font-size:11px; color:var(--muted);
+    border-top:1px solid var(--border); margin-top:20px;
   }
 
-  /* ─── RESPONSIVE ──────────────────────────────────── */
-  @media (max-width: 600px) {
-    header { padding: 0 16px; }
-    main   { padding: 16px; }
-    .global-bar { padding: 12px 16px; }
-    .cards-grid { grid-template-columns: 1fr; }
-    .stat-chips { margin-left: 0; }
+  @media (max-width:600px) {
+    header { padding:0 16px; height:auto; padding-top:10px; padding-bottom:10px; }
+    main   { padding:16px; }
+    .global-bar { padding:12px 16px; }
+    .cards { grid-template-columns:1fr; }
+    .chips { margin-left:0; }
+    .header-date { display:none; }
   }
-
-  @media (prefers-reduced-motion: reduce) {
-    .live-dot, .status-badge.up .status-dot { animation: none; }
+  @media (prefers-reduced-motion:reduce) {
+    .live-dot, .badge.up .bdot { animation:none; }
   }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="header-brand">
-    <div class="brand-icon">📚</div>
+  <div class="brand">
+    <div class="brand-icon">
+      <img src="https://pustakajaya.com/favicon.png"
+           onerror="this.src='https://pustakajaya.com/favicon.ico'"
+           alt="Pustaka Jaya"/>
+    </div>
     <div>
-      <div class="brand-name"><span>Pustaka Jaya</span> // Server Status</div>
+      <div class="brand-name"><span>Pustaka Jaya Server Status</span></div>
     </div>
   </div>
-  <div class="header-meta">
-    <span id="last-refresh-label">Last refresh: —</span>
-    <span id="next-check-badge">Next check: —</span>
+  <div class="header-right">
+    <div class="header-datetime">
+      <div class="header-date" id="header-date">—</div>
+      <div class="header-time" id="header-time">—</div>
+    </div>
+    <span id="badge-next">Next: —</span>
   </div>
 </header>
 
 <div class="global-bar">
   <div class="global-status">
-    <div class="live-dot" id="global-dot"></div>
-    <span id="global-status-text">Checking servers…</span>
+    <div class="live-dot" id="gdot"></div>
+    <span id="gtext" style="color:var(--muted)">Menghubungkan…</span>
   </div>
-  <div class="stat-chips">
-    <div class="chip total"><span id="chip-total">—</span> total</div>
-    <div class="chip up">   <span id="chip-up">—</span>    up</div>
-    <div class="chip down"> <span id="chip-down">—</span>  down</div>
+  <div class="chips">
+    <div class="chip all"><span id="c-total">—</span>&nbsp;server</div>
+    <div class="chip up" ><span id="c-up">—</span>&nbsp;up</div>
+    <div class="chip down"><span id="c-down">—</span>&nbsp;down</div>
   </div>
-  <button class="btn-check" id="btn-check-now" onclick="triggerCheckNow()">⚡ Check Now</button>
+  <button class="btn-check" id="btn-now" onclick="checkNow()">⚡ Check Now</button>
 </div>
 
-<main id="main-content">
-  <div style="text-align:center; padding:60px; color:var(--muted); font-family:var(--font-mono); font-size:13px;">
-    <div style="font-size:32px; margin-bottom:12px;">⏳</div>
-    Connecting to monitor backend…
+<main id="main">
+  <div class="error-state">
+    <div class="icon">⏳</div>
+    <div class="title">Memuat data…</div>
   </div>
 </main>
 
 <div id="toast"></div>
 
 <footer>
-  Pustaka Jaya Uptime Monitor &nbsp;·&nbsp; Checks every 3 minutes &nbsp;·&nbsp; Data stored in <code>serversstatus.db</code>
+  Pustaka Jaya Server Status &nbsp;·&nbsp; Auto-check setiap 3 menit &nbsp;·&nbsp; CP: <a href="https://wa.me/6281394483625" target="_blank" rel="noopener" style="color:var(--cyan);text-decoration:none;font-family:var(--mono);">Muhammad Ridwan Hakim, S.T., CPITA, ITPMCP</a>
 </footer>
 
 <script>
-const API = 'http://localhost:3737/api';
+const API    = '/api';
 const GROUPS = ['SundaDigi', 'Gapura', 'Pustaka Jaya', 'Islamika & Rancage'];
-let checkInterval = null;
-let countdownInterval = null;
-let nextCheckAt = null;
-let statusData = null;
 
-// ─── Fetch status from backend
+let nextAt  = null;
+let cdTimer = null;
+let clockTimer = null;
+
+// ─── Format tanggal: Senin, 15 Juni 2026
+function formatDate(d) {
+  return d.toLocaleDateString('id-ID', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  });
+}
+
+// ─── Pad angka jadi 2 digit: 9 → "09"
+function p(n) { return String(n).padStart(2, '0'); }
+
+// ─── Format waktu: 10:12:28 (manual — hindari titik dari locale id-ID)
+function formatTime(d) {
+  return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+// ─── Format waktu singkat untuk "Terakhir dicek": 10:12:28
+function formatTimeFull(isoString) {
+  const d = new Date(isoString + (isoString.endsWith('Z') ? '' : 'Z'));
+  return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+// ─── Format datetime tooltip di sparkline: 15/06/2026 10:12:28
+function formatDateTimeFull(isoString) {
+  const d = new Date(isoString + (isoString.endsWith('Z') ? '' : 'Z'));
+  return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+// ─── Live clock di header
+function startClock() {
+  function tick() {
+    const now = new Date();
+    document.getElementById('header-date').textContent = formatDate(now);
+    document.getElementById('header-time').textContent = formatTime(now);
+  }
+  tick();
+  clockTimer = setInterval(tick, 1000);
+}
+
+// ─── Fetch status
 async function fetchStatus() {
   try {
-    const res = await fetch(`${API}/status`);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return await res.json();
-  } catch (e) {
-    return null;
-  }
+    const r = await fetch(`${API}/status`);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } catch(e) { return null; }
 }
 
-// ─── Trigger immediate check
-async function triggerCheckNow() {
-  const btn = document.getElementById('btn-check-now');
-  btn.disabled = true;
-  btn.textContent = '⟳ Checking…';
-  showToast('Running checks on all servers…');
+// ─── Check now
+async function checkNow() {
+  const btn = document.getElementById('btn-now');
+  btn.disabled = true; btn.textContent = '⟳ Mengecek…';
+  toast('Menjalankan pengecekan semua server…');
   try {
-    await fetch(`${API}/check-now`, { method: 'POST' });
-    await loadAndRender();
+    await fetch(`${API}/check-now`, { method:'POST' });
+    await render();
     resetCountdown();
-    showToast('✅ All checks complete!');
-  } catch (e) {
-    showToast('❌ Cannot reach monitor backend');
+    toast('✅ Pengecekan selesai!');
+  } catch(e) {
+    toast('❌ Gagal terhubung ke backend');
   }
-  btn.disabled = false;
-  btn.textContent = '⚡ Check Now';
+  btn.disabled = false; btn.textContent = '⚡ Check Now';
 }
 
-// ─── Countdown timer
+// ─── Countdown
 function resetCountdown() {
-  nextCheckAt = Date.now() + 3 * 60 * 1000;
-  if (countdownInterval) clearInterval(countdownInterval);
-  countdownInterval = setInterval(updateCountdown, 1000);
-  updateCountdown();
+  nextAt = Date.now() + 3*60*1000;
+  if (cdTimer) clearInterval(cdTimer);
+  cdTimer = setInterval(() => {
+    const rem = Math.max(0, Math.ceil((nextAt - Date.now()) / 1000));
+    const m = Math.floor(rem/60), s = rem%60;
+    document.getElementById('badge-next').textContent = `Next: ${m}:${s.toString().padStart(2,'0')}`;
+  }, 1000);
 }
 
-function updateCountdown() {
-  const el = document.getElementById('next-check-badge');
-  if (!nextCheckAt) return;
-  const remaining = Math.max(0, Math.ceil((nextCheckAt - Date.now()) / 1000));
-  const m = Math.floor(remaining / 60);
-  const s = remaining % 60;
-  el.textContent = `Next check: ${m}:${s.toString().padStart(2,'0')}`;
-}
-
-// ─── Render everything
-async function loadAndRender() {
+// ─── Render dashboard
+async function render() {
   const data = await fetchStatus();
+  const main = document.getElementById('main');
+
   if (!data) {
-    document.getElementById('main-content').innerHTML = `
-      <div style="text-align:center; padding:60px; font-family:var(--font-mono); font-size:13px;">
-        <div style="font-size:40px; margin-bottom:16px;">🔌</div>
-        <div style="color:var(--red); font-weight:700; margin-bottom:8px;">Cannot connect to monitor backend</div>
-        <div style="color:var(--muted);">Make sure <code style="color:var(--cyan)">node server.js</code> is running on port 3737</div>
+    main.innerHTML = `
+      <div class="error-state">
+        <div class="icon">🔌</div>
+        <div class="title">Tidak dapat terhubung ke backend</div>
+        <div class="sub">
+          Pastikan Node.js App sudah berjalan di cPanel.<br>
+          Entry point: <code>app.js</code> &nbsp;·&nbsp; Status: <code>Running</code>
+        </div>
       </div>`;
     return;
   }
-  statusData = data;
 
-  // Update global stats
-  const servers = data.servers;
-  const stats = data.stats;
-  const history = data.history;
-  const now = new Date();
+  const { servers, stats, history } = data;
 
-  let upCount = 0, downCount = 0;
+  // ─ Global stats
+  let up = 0, down = 0;
   servers.forEach(s => {
     const st = stats[s.id];
     if (!st) return;
-    if (st.last_status === 'UP') upCount++;
-    else downCount++;
+    st.last_status === 'UP' ? up++ : down++;
   });
+  document.getElementById('c-total').textContent = servers.length;
+  document.getElementById('c-up').textContent    = up;
+  document.getElementById('c-down').textContent  = down;
 
-  document.getElementById('chip-total').textContent = servers.length;
-  document.getElementById('chip-up').textContent = upCount;
-  document.getElementById('chip-down').textContent = downCount;
-  document.getElementById('last-refresh-label').textContent = `Last refresh: ${now.toLocaleTimeString('id-ID')}`;
-
-  const dot = document.getElementById('global-dot');
-  const txt = document.getElementById('global-status-text');
-  if (downCount === 0) {
+  const dot = document.getElementById('gdot');
+  const txt = document.getElementById('gtext');
+  if (down === 0 && up > 0) {
     dot.className = 'live-dot';
-    txt.textContent = 'All systems operational';
+    txt.textContent = 'Semua sistem beroperasi normal';
     txt.style.color = 'var(--green)';
-  } else if (downCount < servers.length) {
-    dot.className = 'live-dot issue';
-    txt.textContent = `${downCount} server${downCount > 1 ? 's' : ''} unreachable`;
+  } else if (down > 0 && down < servers.length) {
+    dot.className = 'live-dot warn';
+    txt.textContent = `${down} server tidak dapat dijangkau`;
     txt.style.color = 'var(--amber)';
-  } else {
-    dot.className = 'live-dot down';
-    txt.textContent = 'Major outage detected';
+  } else if (down === servers.length) {
+    dot.className = 'live-dot crit';
+    txt.textContent = 'Gangguan besar terdeteksi';
     txt.style.color = 'var(--red)';
   }
 
-  // Render groups
-  const main = document.getElementById('main-content');
+  // ─ Render groups
   main.innerHTML = '';
-
   GROUPS.forEach(group => {
-    const groupServers = servers.filter(s => s.group === group);
-    if (!groupServers.length) return;
+    const gs = servers.filter(s => s.group === group);
+    if (!gs.length) return;
 
     const block = document.createElement('div');
     block.className = 'group-block';
-    block.innerHTML = `<div class="section-label">${group}</div><div class="cards-grid" id="grid-${group.replace(/\s+/g,'_')}"></div>`;
-    main.appendChild(block);
 
-    const grid = block.querySelector('.cards-grid');
-    groupServers.forEach(server => {
-      const st = stats[server.id];
-      const hist = (history[server.id] || []).slice(0, 20).reverse();
-      const status = st ? st.last_status : 'pending';
-      const uptime = st ? st.uptime_percent.toFixed(1) : '—';
-      const rt = st && st.last_response_time_ms ? st.last_response_time_ms + 'ms' : '—';
-      const code = st && st.last_status_code ? st.last_status_code : '—';
-      const lastCheck = st && st.last_checked_at
-        ? new Date(st.last_checked_at + 'Z').toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-        : 'Never';
+    const grid = document.createElement('div');
+    grid.className = 'cards';
 
-      const statusClass = status === 'UP' ? 'up' : status === 'DOWN' ? 'down' : 'pending';
-      const statusLabel = status === 'UP' ? '● UP' : status === 'DOWN' ? '● DOWN' : '○ PENDING';
+    gs.forEach(sv => {
+      const st   = stats[sv.id];
+      const hist = ((history[sv.id] || []).slice(0, 20)).reverse();
+      const status  = st?.last_status ?? 'PENDING';
+      const sc      = status === 'UP' ? 'up' : status === 'DOWN' ? 'down' : 'pend';
+      const uptime  = st ? st.uptime_percent.toFixed(1) + '%' : '—';
+      const rt      = st?.last_response_time_ms ? st.last_response_time_ms + 'ms' : '—';
+      const code    = st?.last_status_code ?? '—';
+      const lastChk = st?.last_checked_at ? formatTimeFull(st.last_checked_at) : 'Belum pernah';
 
-      // Sparkline segments
-      const segments = Array.from({ length: 20 }, (_, i) => {
+      const segs = Array.from({length: 20}, (_, i) => {
         const h = hist[i];
-        if (!h) return `<div class="hb-segment pending" title="No data"></div>`;
+        if (!h) return `<div class="seg pend" title="Belum ada data"></div>`;
         const cls = h.status === 'UP' ? 'up' : 'down';
-        const t = new Date(h.checked_at + 'Z').toLocaleString('id-ID');
-        return `<div class="hb-segment ${cls}" title="${h.status} — ${h.response_time_ms}ms @ ${t}"></div>`;
+        const tip = `${h.status} — ${h.response_time_ms}ms\n${formatDateTimeFull(h.checked_at)}`;
+        return `<div class="seg ${cls}" title="${tip}"></div>`;
       });
 
       const card = document.createElement('div');
-      card.className = `card ${statusClass}`;
+      card.className = `card ${sc}`;
       card.innerHTML = `
-        <div class="card-header">
+        <div class="card-head">
           <div>
-            <div class="card-label">${server.label}</div>
-            <div class="card-url">${server.url.replace('https://','')}</div>
+            <div class="card-label">${sv.label}</div>
+            <div class="card-url">${sv.url.replace('https://','')}</div>
           </div>
-          <div class="status-badge ${statusClass}"><div class="status-dot"></div>${status}</div>
+          <div class="badge ${sc}"><div class="bdot"></div>${status}</div>
         </div>
-        <div class="card-metrics">
-          <div class="metric">
-            <div class="metric-val ${statusClass}">${uptime}%</div>
-            <div class="metric-label">Uptime</div>
+        <div class="metrics">
+          <div>
+            <div class="metric-val ${sc}">${uptime}</div>
+            <div class="metric-lbl">Uptime</div>
           </div>
-          <div class="metric">
+          <div>
             <div class="metric-val">${rt}</div>
-            <div class="metric-label">Response</div>
+            <div class="metric-lbl">Respons</div>
           </div>
-          <div class="metric">
+          <div>
             <div class="metric-val">${code}</div>
-            <div class="metric-label">HTTP</div>
+            <div class="metric-lbl">HTTP</div>
           </div>
         </div>
-        <div class="history-bar" title="Last 20 checks (oldest → newest)">${segments.join('')}</div>
-        <div class="last-checked">Last checked: ${lastCheck}</div>
+        <div class="sparkline" title="20 check terakhir (terlama → terbaru)">${segs.join('')}</div>
+        <div class="last-chk">Terakhir dicek: ${lastChk}</div>
       `;
       grid.appendChild(card);
     });
+
+    block.innerHTML = `<div class="section-label">${group}</div>`;
+    block.appendChild(grid);
+    main.appendChild(block);
   });
 }
 
-// ─── Toast helper
-let toastTimer = null;
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+// ─── Toast
+let toastT = null;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  if (toastT) clearTimeout(toastT);
+  toastT = setTimeout(() => el.classList.remove('show'), 3200);
 }
 
 // ─── Init
-async function init() {
-  await loadAndRender();
+(async function init() {
+  startClock();
+  await render();
   resetCountdown();
-
-  // Auto-refresh display every 3 minutes (synced with server checks)
-  checkInterval = setInterval(async () => {
-    await loadAndRender();
-    resetCountdown();
-  }, 3 * 60 * 1000);
-}
-
-init();
+  setInterval(async () => { await render(); resetCountdown(); }, 3*60*1000);
+})();
 </script>
 </body>
 </html>
